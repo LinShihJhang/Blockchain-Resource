@@ -4,11 +4,9 @@ pragma solidity 0.8.17;
 import { ISimpleSwap } from "./interface/ISimpleSwap.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 contract SimpleSwap is ISimpleSwap, ERC20 {
-    using SafeMath for uint256;
     uint public constant MINIMUM_LIQUIDITY = 10 ** 3;
     bytes4 private constant SELECTOR = bytes4(keccak256(bytes("transfer(address,uint256)")));
 
@@ -22,14 +20,6 @@ contract SimpleSwap is ISimpleSwap, ERC20 {
     uint public price0CumulativeLast;
     uint public price1CumulativeLast;
     uint public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
-
-    uint private unlocked = 1;
-    modifier lock() {
-        require(unlocked == 1, "UniswapV2: LOCKED");
-        unlocked = 0;
-        _;
-        unlocked = 1;
-    }
 
     constructor(address tokenA_, address tokenB_) ERC20("LPToken", "LPT") {
         require(tokenA_ != tokenB_, "SimpleSwap: TOKENA_TOKENB_IDENTICAL_ADDRESS");
@@ -65,12 +55,11 @@ contract SimpleSwap is ISimpleSwap, ERC20 {
         uint256 reserveIn;
         uint256 reserveOut;
 
-
         if (tokenIn == _tokenA) {
             reserveIn = reserveA;
             reserveOut = reserveB;
 
-            amountOut = amountIn.mul(reserveOut) / reserveIn.add(amountIn);
+            amountOut = (amountIn * reserveOut) / (reserveIn + amountIn);
 
             _reserveA += amountIn;
             _reserveB -= amountOut;
@@ -81,7 +70,7 @@ contract SimpleSwap is ISimpleSwap, ERC20 {
             reserveIn = reserveB;
             reserveOut = reserveA;
 
-            amountOut = amountIn.mul(reserveOut) / reserveIn.add(amountIn);
+            amountOut = (amountIn * reserveOut) / (reserveIn + amountIn);
 
             _reserveA -= amountOut;
             _reserveB += amountIn;
@@ -90,7 +79,7 @@ contract SimpleSwap is ISimpleSwap, ERC20 {
             IERC20(_tokenB).transferFrom(msg.sender, address(this), amountIn);
         }
 
-        require(reserveIn.add(amountIn).mul(reserveOut.sub(amountOut)) >= reserveIn.mul(reserveOut), "SimpleSwap: K");
+        require((reserveIn + amountIn) * (reserveOut - amountOut) >= (reserveIn * reserveOut), "SimpleSwap: K");
 
         emit Swap(msg.sender, tokenIn, tokenOut, amountIn, amountOut);
     }
@@ -111,11 +100,11 @@ contract SimpleSwap is ISimpleSwap, ERC20 {
         if (_reserveA == 0 && _reserveB == 0) {
             (amountA, amountB) = (amountAIn, amountBIn);
         } else {
-            uint256 amountBOptimal = amountAIn.mul(_reserveB) / _reserveA;
+            uint256 amountBOptimal = (amountAIn * _reserveB) / _reserveA;
             if (amountBOptimal <= amountBIn) {
                 (amountA, amountB) = (amountAIn, amountBOptimal);
             } else {
-                uint256 amountAOptimal = amountBIn.mul(_reserveA)  / _reserveB;
+                uint256 amountAOptimal = (amountBIn * _reserveA) / _reserveB;
                 require(amountAOptimal <= amountAIn, "SimpleSwap: Add Liquidity ERROR");
                 (amountA, amountB) = (amountAOptimal, amountBIn);
             }
@@ -129,7 +118,7 @@ contract SimpleSwap is ISimpleSwap, ERC20 {
         // } else {
         //     liquidity = Math.min(amountA.mul(totalSupply) / _reserveA, amountB.mul(totalSupply) / _reserveB);
         // }
-        liquidity = Math.sqrt(amountA.mul(amountB));
+        liquidity = Math.sqrt(amountA * amountB);
         require(liquidity > 0, "SimpleSwap: INSUFFICIENT_LIQUIDITY_MINTED");
 
         IERC20(_tokenA).transferFrom(msg.sender, address(this), amountA);
@@ -153,8 +142,8 @@ contract SimpleSwap is ISimpleSwap, ERC20 {
         uint256 balanceB = IERC20(tokenB).balanceOf(address(this));
         // uint256 liquidity = balanceOf[address(this)];
         uint256 totalSupply = totalSupply();
-        amountA = liquidity.mul(balanceA) / totalSupply;
-        amountB = liquidity.mul(balanceB) / totalSupply;
+        amountA = (liquidity * balanceA) / totalSupply;
+        amountB = (liquidity * balanceB) / totalSupply;
         require(amountA > 0 && amountB > 0, "SimpleSwap: INSUFFICIENT_LIQUIDITY_BURNED");
 
         _burn(address(this), liquidity);

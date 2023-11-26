@@ -7,7 +7,11 @@ import { UUPSMultiSigWallet } from "../src/UUPS/UUPSMultiSigWallet.sol";
 import { UUPSMultiSigWalletV2 } from "../src/UUPS/UUPSMultiSigWalletV2.sol";
 import { MultiSigWallet, MultiSigWalletV2 } from "../src/MultiSigWallet/MultiSigWalletV2.sol";
 
-contract NoProxiableContract {}
+contract NoProxiableContract {
+  fallback() external payable {
+      
+    }
+}
 
 contract UUPSTest is Test {
 
@@ -18,6 +22,7 @@ contract UUPSTest is Test {
   address public receiver = makeAddr("receiver");
 
   UUPSProxy proxy;
+  NoProxiableContract noProxiableContract;
   UUPSMultiSigWallet wallet;
   UUPSMultiSigWalletV2 walletV2;
   UUPSMultiSigWallet proxyWallet;
@@ -31,6 +36,8 @@ contract UUPSTest is Test {
       abi.encodeWithSelector(wallet.initialize.selector, [alice, bob, carol]),
       address(wallet)
     );
+    proxyWallet = UUPSMultiSigWallet(address(proxy));
+    proxyWalletV2 = UUPSMultiSigWalletV2(address(proxy));
     vm.stopPrank();
   }
 
@@ -40,11 +47,25 @@ contract UUPSTest is Test {
     // 2. upgrade to UUPSMultiSigWalletV2 by calling updateCodeAddress
     // 3. assert that proxyWallet.VERSION() is "0.0.2"
     // 4. assert updateCodeAddress is gone by calling updateCodeAddress with low-level call or UUPSMutliSigWallet
+    vm.startPrank(admin);
+    assertEq(proxyWallet.VERSION(),"0.0.1");
+    proxyWallet.updateCodeAddress(address(walletV2),"");
+    assertEq(proxyWalletV2.VERSION(),"0.0.2");
+
+    vm.expectRevert();
+    UUPSMultiSigWallet(address(proxy)).updateCodeAddress(address(walletV2),"");
+    vm.stopPrank();
+
   }
 
   function test_UUPS_updateCodeAddress_revert_if_no_proxiableUUID() public {
     // TODO:
     // 1. deploy NoProxiableContract
     // 2. upgrade to NoProxiableContract by calling updateCodeAddress, which should revert
+    vm.startPrank(admin);
+    noProxiableContract = new NoProxiableContract();
+    vm.expectRevert();
+    UUPSMultiSigWallet(address(proxy)).updateCodeAddress(address(noProxiableContract),"");
+    vm.stopPrank();
   }
 }

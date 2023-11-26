@@ -16,5 +16,14 @@ contract UUPSMultiSigWallet is Slots, MultiSigWallet, Proxiable {
     // 1. check if newimplementation is compatible with proxiable
     // 2. update the implementation address
     // 3. initialize proxy, if data exist, then initialize proxy with _data
+
+    require(Proxiable(newImplementation).proxiableUUID() == bytes32(keccak256("PROXIABLE")), "newImplementation not have proxiable");
+
+     _setSlotToAddress(proxiableUUID(), newImplementation);
+
+     if(data.length > 0){
+      (bool success, ) = newImplementation.delegatecall(data); 
+      require(success, "initialize faild");
+     }
   }
 }

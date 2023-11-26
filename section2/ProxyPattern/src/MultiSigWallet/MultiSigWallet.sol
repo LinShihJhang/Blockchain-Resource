@@ -24,6 +24,13 @@ contract MultiSigWallet {
   event SubmitTransaction(uint indexed txIndex, address indexed to, uint value);
   event ExecuteTransaction(uint indexed txIndex);
 
+  function initializer(address[3] memory _owners) public {
+    //adminOwner = msg.sender;
+    owner1 = _owners[0];
+    owner2 = _owners[1];
+    owner3 = _owners[2];
+  }
+
   constructor(address[3] memory _owners) {
     adminOwner = msg.sender;
     owner1 = _owners[0];

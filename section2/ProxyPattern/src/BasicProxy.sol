@@ -8,4 +8,12 @@ contract BasicProxy is Proxy {
   // 1. add a variable that stores the address of the implementation contract
   // 2. add a constructor that takes the address of the implementation contract and stores it in the variable
   // 3. add a fallback function that delegates the call to the implementation contract
+  address implementationContractAddress;
+  constructor(address implementationContractAddress_){
+    implementationContractAddress = implementationContractAddress_;
+  }
+  fallback() external payable {
+        _delegate(implementationContractAddress);
+    }
+  
 }

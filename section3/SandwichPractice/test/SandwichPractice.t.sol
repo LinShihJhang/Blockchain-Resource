@@ -12,6 +12,7 @@ contract SandwichPracticeTest is SandwichSetUp {
     uint256 makerInitialEthBalance;
     uint256 makerInitialUsdcBalance;
     uint256 attackerInitialEthBalance;
+    uint256 attackerInitialUsdcBalance;
     uint256 victimInitialEthBalance;
 
     function setUp() public override {
@@ -83,17 +84,50 @@ contract SandwichPracticeTest is SandwichSetUp {
     function _attackerAction1() internal {
         // victim swap ETH to USDC (front-run victim)
         // implement here
+        vm.startPrank(attacker);
+
+        address[] memory path = new address[](2);
+        path[0] = address(weth);
+        path[1] = address(usdc);
+
+        uniswapV2Router.swapExactETHForTokens{ value: 1 ether }(
+            0,
+            path,
+            attacker,
+            block.timestamp
+        );
+
+        vm.stopPrank();
     }
 
     // # Practice 2: attacker sandwich attack
     function _attackerAction2() internal {
         // victim swap USDC to ETH
         // implement here
+        vm.startPrank(attacker);
+
+        usdc.approve(address(uniswapV2Router), usdc.balanceOf(attacker));
+
+        address[] memory path = new address[](2);
+        path[0] = address(usdc);
+        path[1] = address(weth);
+
+
+        uniswapV2Router.swapExactTokensForETH(
+            usdc.balanceOf(attacker), 
+            0,
+            path,
+            attacker, 
+            block.timestamp
+        );
+
+        vm.stopPrank();
     }
 
     // # Discussion 2: how to maximize profit ?
     function _checkAttackerProfit() internal {
         uint256 profit = attacker.balance - attackerInitialEthBalance;
+        console2.log(profit);
         assertGt(profit, 0);
     }
 }

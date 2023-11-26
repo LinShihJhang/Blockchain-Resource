@@ -8,7 +8,6 @@ import { IUniswapV2Callee } from "v2-core/interfaces/IUniswapV2Callee.sol";
 
 // This is a practice contract for flash swap arbitrage
 contract Arbitrage is IUniswapV2Callee, Ownable {
-
     //
     // EXTERNAL NON-VIEW ONLY OWNER
     //
@@ -28,6 +27,32 @@ contract Arbitrage is IUniswapV2Callee, Ownable {
 
     function uniswapV2Call(address sender, uint256 amount0, uint256 amount1, bytes calldata data) external override {
         // TODO
+
+        require(sender == address(this), "Sender must be this contract");
+        require(amount0 > 0 || amount1 > 0, "amount0 or amount1 must be greater than 0");
+
+        (address priceLowerPool,address priceHigherPool,uint256 borrowETH) = abi.decode(data, (address, address, uint256));
+
+        require(msg.sender==priceLowerPool || msg.sender==priceHigherPool, "Sender must be pair");
+
+        if (msg.sender == priceLowerPool) {
+            (uint256 reserveHighWETH, uint256 reserveHighUSDC, uint32 blockTimestampLastHigh) = IUniswapV2Pair(priceHigherPool).getReserves();
+            uint256 usdcHighAmountOut = _getAmountOut(borrowETH, reserveHighWETH, reserveHighUSDC);
+
+            IUniswapV2Pair(priceHigherPool).swap(
+                0,
+                usdcHighAmountOut,
+                address(this),
+                abi.encode(priceLowerPool, priceHigherPool, borrowETH)
+            );
+
+            (uint256 reserveLowWETH, uint256 reserveLowUSDC, uint32 blockTimestampLastLow) = IUniswapV2Pair(priceLowerPool).getReserves();
+            uint256 usdcLowAmountIn =  _getAmountIn(amount0, reserveLowUSDC, reserveLowWETH);
+            IERC20(IUniswapV2Pair(priceLowerPool).token1()).transfer(priceLowerPool, usdcLowAmountIn);
+
+        }else if(msg.sender == priceHigherPool){
+            IERC20(IUniswapV2Pair(priceHigherPool).token0()).transfer(priceHigherPool, borrowETH);
+        }
     }
 
     // Method 1 is
@@ -41,6 +66,12 @@ contract Arbitrage is IUniswapV2Callee, Ownable {
     // for testing convenient, we implement the method 1 here
     function arbitrage(address priceLowerPool, address priceHigherPool, uint256 borrowETH) external {
         // TODO
+        IUniswapV2Pair(priceLowerPool).swap(
+            borrowETH,
+            0,
+            address(this),
+            abi.encode(priceLowerPool, priceHigherPool, borrowETH)
+        );
     }
 
     //

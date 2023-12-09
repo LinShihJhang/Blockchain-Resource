@@ -12,7 +12,9 @@ import "compound-protocol/contracts/WhitePaperInterestRateModel.sol";
 import "compound-protocol/contracts/SimplePriceOracle.sol";
 
 contract UnderlyingCoin is ERC20 {
-    constructor() ERC20("Underlying coin", "ULC")  {}
+    constructor() ERC20("Underlying coin", "ULC")  {
+        _mint(msg.sender, 10000e18);
+    }
 }
 
 contract CompoundScript is Script {
@@ -26,18 +28,24 @@ contract CompoundScript is Script {
         address myAddress = 0x7502D29B7ebEBb410d42FB8e4ff62CEd6CFC24d4;
 
         UnderlyingCoin ulc = new UnderlyingCoin();
-        Comptroller comptroller = new Comptroller();
         Unitroller unitroller = new Unitroller();
+        Comptroller comptroller = new Comptroller();
+        Comptroller comptrollerProxy = Comptroller(address(unitroller));
         WhitePaperInterestRateModel whitePaperInterestRateModel = new WhitePaperInterestRateModel(0, 0);
         CErc20Delegate cErc20Delegate = new CErc20Delegate();
 
         SimplePriceOracle simplePriceOracle = new SimplePriceOracle();
 
+        unitroller._setPendingImplementation(address(comptroller));
+        comptroller._become(unitroller);
+
+        comptrollerProxy._setPriceOracle(simplePriceOracle);
+
         CErc20Delegator cErc20Delegator = new CErc20Delegator(
             address(ulc), 
-            ComptrollerInterface(address(comptroller)), 
+            comptrollerProxy, 
             whitePaperInterestRateModel, 
-            1,
+            1e18,
             "Compound Underlying coin",
             "cULC",
             18,
@@ -46,10 +54,7 @@ contract CompoundScript is Script {
             "0x"
         );
 
-        unitroller._setPendingImplementation(address(comptroller));
-        comptroller._become(unitroller);
-
-        Comptroller(address(unitroller))._setPriceOracle(simplePriceOracle);
+        
 
         vm.stopBroadcast();
     }

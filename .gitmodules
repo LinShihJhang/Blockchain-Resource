@@ -76,3 +76,6 @@
 [submodule "section2/StandardProxy/lib/forge-std"]
 	path = section2/StandardProxy/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "section3/CompoundPractice/lib/compound-protocol"]
+	path = section3/CompoundPractice/lib/compound-protocol
+	url = https://github.com/compound-finance/compound-protocol

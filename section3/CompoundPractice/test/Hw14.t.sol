@@ -11,6 +11,7 @@ import "compound-protocol/contracts/CErc20Delegate.sol";
 import "compound-protocol/contracts/CToken.sol";
 import "compound-protocol/contracts/WhitePaperInterestRateModel.sol";
 import "compound-protocol/contracts/SimplePriceOracle.sol";
+import {AaveFlashLoan} from "../contracts/AaveFlashLoan.sol";
 
 contract Hw14Test is Test {
     Unitroller unitroller;
@@ -23,6 +24,26 @@ contract Hw14Test is Test {
     CErc20Delegator cUSDC;
     CErc20Delegator cUNI;
     SimplePriceOracle simplePriceOracle;
+
+    AaveFlashLoan aaveFlashLoan;
+    struct CallbackData {
+        address USDC;
+        address cUSDC;
+        address cUNI;
+        address UNI;
+        uint256 borrower;
+        uint256 borrowBalance;
+        address liquidator;
+        address borrower;
+    }
+
+    // underlyingCoinA.approve(address(cTokenA), 100e18);
+    // uint success = cTokenA.liquidateBorrow(
+    //     user1,
+    //     borrowBalance / 2,
+    //     cTokenB
+    // );
+    // require(success == 0, "liquidateBorrow faild");
 
     address admin = makeAddr("Admin");
     address user1 = makeAddr("User1");
@@ -98,14 +119,19 @@ contract Hw14Test is Test {
         );
         // 設定 UNI 的 collateral factor 為 50%
         assertEq(
-            comptrollerProxy._setCollateralFactor(CToken(address(cUNI)), 0.5e18),
+            comptrollerProxy._setCollateralFactor(
+                CToken(address(cUNI)),
+                0.5e18
+            ),
             0 // no error
         );
-        
+
         //deal(address(USDC), user1, initUSDC);
         deal(address(UNI), user1, initUNI);
         deal(address(USDC), user3, initUSDC);
         //deal(address(UNI), user3, initUNI);
+
+        aaveFlashLoan = new AaveFlashLoan();
 
         vm.label(address(comptrollerProxy), "comptrollerProxy");
         vm.label(address(cUSDC), "cUSDC");
@@ -117,7 +143,6 @@ contract Hw14Test is Test {
     }
 
     function user1Borrow() internal {
-        
         vm.startPrank(user3);
         USDC.approve(address(cUSDC), initUSDC);
         cUSDC.mint(initUSDC);
@@ -170,6 +195,5 @@ contract Hw14Test is Test {
         user2Liquidate();
 
         // 可以自行檢查清算 50% 後是不是大約可以賺 63 USDC
-
     }
 }

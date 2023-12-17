@@ -2,6 +2,7 @@
 pragma solidity ^0.8.10;
 
 import "forge-std/Test.sol";
+import {console2} from "forge-std/Script.sol";
 import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import "compound-protocol/contracts/Comptroller.sol";
 import "compound-protocol/contracts/ComptrollerInterface.sol";
@@ -28,22 +29,13 @@ contract Hw14Test is Test {
     AaveFlashLoan aaveFlashLoan;
     struct CallbackData {
         address USDC;
+        address UNI;
         address cUSDC;
         address cUNI;
-        address UNI;
-        uint256 borrower;
-        uint256 borrowBalance;
-        address liquidator;
         address borrower;
+        uint256 liquidateAmount;
+        address liquidator;
     }
-
-    // underlyingCoinA.approve(address(cTokenA), 100e18);
-    // uint success = cTokenA.liquidateBorrow(
-    //     user1,
-    //     borrowBalance / 2,
-    //     cTokenB
-    // );
-    // require(success == 0, "liquidateBorrow faild");
 
     address admin = makeAddr("Admin");
     address user1 = makeAddr("User1");
@@ -170,16 +162,32 @@ contract Hw14Test is Test {
     function user2Liquidate() internal {
         vm.startPrank(user2);
         (, , uint shortfall) = comptrollerProxy.getAccountLiquidity(user1);
-        require(shortfall > 0, "user1 can not liquidate");
-
+        assertGt(shortfall, 0);
         uint borrowBalance = cUSDC.borrowBalanceStored(user1);
-        // underlyingCoinA.approve(address(cTokenA), 100e18);
-        // uint success = cTokenA.liquidateBorrow(
+
+        // deal(address(USDC), user2, borrowBalance / 2);
+        // USDC.approve(address(cUSDC), borrowBalance / 2);
+        // uint success = cUSDC.liquidateBorrow(
         //     user1,
         //     borrowBalance / 2,
-        //     cTokenB
+        //     cUNI
         // );
         // require(success == 0, "liquidateBorrow faild");
+
+        CallbackData memory data;
+        data.USDC = address(USDC);
+        data.UNI = address(UNI);
+        data.cUSDC = address(cUSDC);
+        data.cUNI = address(cUNI);
+        data.borrower = user1;
+        data.liquidateAmount = borrowBalance / 2;
+        data.liquidator = user2;
+
+        aaveFlashLoan.execute(abi.encode(data));
+
+        // 可以自行檢查清算 50% 後是不是大約可以賺 63 USDC
+        console2.log(USDC.balanceOf(user2));
+
         vm.stopPrank();
     }
 
@@ -193,7 +201,5 @@ contract Hw14Test is Test {
 
         //讓 User2 透過 AAVE 的 Flash loan 來借錢清算 User1
         user2Liquidate();
-
-        // 可以自行檢查清算 50% 後是不是大約可以賺 63 USDC
     }
 }

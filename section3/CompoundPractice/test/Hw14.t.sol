@@ -14,6 +14,9 @@ import "compound-protocol/contracts/WhitePaperInterestRateModel.sol";
 import "compound-protocol/contracts/SimplePriceOracle.sol";
 import {AaveFlashLoan} from "../contracts/AaveFlashLoan.sol";
 
+//npm install
+//forge install
+
 contract Hw14Test is Test {
     Unitroller unitroller;
     Comptroller comptroller;

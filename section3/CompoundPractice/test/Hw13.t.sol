@@ -151,7 +151,8 @@ contract Hw13Test is Test {
     function user2Liquidate() internal {
         vm.startPrank(user2);
         (, , uint shortfall) = comptrollerProxy.getAccountLiquidity(user1);
-        require(shortfall > 0, "user1 can not liquidate");
+        //require(shortfall > 0, "user1 can not liquidate");
+        assertGt(shortfall, 0);
 
         uint borrowBalance = cTokenA.borrowBalanceStored(user1);
         underlyingCoinA.approve(address(cTokenA), 100e18);
@@ -160,7 +161,8 @@ contract Hw13Test is Test {
             borrowBalance / 2,
             cTokenB
         );
-        require(success == 0, "liquidateBorrow faild");
+        //require(success == 0, "liquidateBorrow faild");
+        assertEq(success, 0);
         vm.stopPrank();
     }
 

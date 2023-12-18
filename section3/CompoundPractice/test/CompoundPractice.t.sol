@@ -59,7 +59,7 @@ contract CompoundPracticeTest is CompoundPracticeSetUp {
     // TODO: 1. Mint some cUSDC with USDC
 
 
-    address anotherBorrower = makeAddr("Another Borrower");
+    //address anotherBorrower = makeAddr("Another Borrower");
     // TODO: 2. Borrow some USDC with another borrower
     // vm.startPrank(anotherBorrower);
 
